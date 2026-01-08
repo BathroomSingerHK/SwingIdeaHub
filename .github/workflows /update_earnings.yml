@@ -1,0 +1,80 @@
+name: Weekly Earnings Update
+
+on:
+  schedule:
+    # 01:15 UTC = 09:15 HKT (Saturday)
+    - cron: '25 1 * * 6'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Download Private Repo
+      - name: Checkout Private Code
+        uses: actions/checkout@v4
+
+      # 2. Set up Python 3.11
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: |
+          pip install pandas yfinance requests Jinja2
+
+      # 4. Run Earnings Script (Private Side)
+      - name: Run Earnings Script
+        run: |
+          # Clean old files in Private Repo runner to ensure fresh start
+          rm -f Earnings/*.html
+          
+          # Run Python script
+          python Earnings/Next_Week_Earning.py
+          
+          # Verify Output
+          ls -l Earnings/*.html
+
+      # 5. Push to Public Repo (With Cleanup & Collision Fix)
+      - name: Push to Public Repo
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        run: |
+          git config --global user.name "ParisTrader Bot"
+          git config --global user.email "bot@paristrader.com"
+          
+          # Clone Public Repo
+          git clone https://x-access-token:${API_TOKEN_GITHUB}@github.com/ParisTrader/paristrader-terminal.git public_repo
+          
+          # Ensure folder exists
+          mkdir -p public_repo/Earnings
+          
+          # --- CLEANUP OLD FILES IN PUBLIC REPO ---
+          # We go into the public repo folder and delete old HTMLs
+          # so we don't accumulate weekly reports forever.
+          cd public_repo/Earnings
+          rm -f *.html
+          cd ../..
+          
+          # Copy new files from Private (Earnings/) to Public (public_repo/Earnings/)
+          cp Earnings/*.html public_repo/Earnings/
+          
+          # Navigate to Public Repo root to commit
+          cd public_repo
+          
+          # Add changes (this tracks the deletion of old files AND addition of new ones)
+          git add .
+          git status
+          
+          # Commit
+          git commit -m "Auto-update Weekly Earnings Data" || echo "No changes to commit"
+          
+          # --- CRITICAL FIX: PULL BEFORE PUSH ---
+          # Rebase ensures we play nice with other concurrent updates
+          git pull --rebase origin main
+          
+          # Push
+          git push origin main
