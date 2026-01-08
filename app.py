@@ -162,7 +162,8 @@ with st.sidebar:
         menu_icon="compass",
         default_index=0,
         styles={
-            "container": {"padding": "0!important", "background-color": "transparent"},
+            # CHANGE "transparent" to "#111827" (your sidebar color)
+            "container": {"padding": "0!important", "background-color": "#111827"},
             "nav-link": {"font-size": "15px", "text-align": "left", "color": "#D1D5DB"},
             "nav-link-selected": {"background-color": "#2563EB", "color": "#FFFFFF"},
         }
