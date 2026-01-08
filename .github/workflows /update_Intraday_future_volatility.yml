@@ -1,0 +1,66 @@
+name: Update Intraday Future Volatility Public
+
+on:
+  schedule:
+    # 1. Mon-Fri 10:05 AM HKT (02:05 UTC)
+    - cron: '5 2 * * 1-5'
+    # 2. Mon-Fri 04:05 PM HKT (08:05 UTC)
+    - cron: '5 8 * * 1-5'
+    # 3. Sat 06:00 AM HKT (Fri 22:00 UTC)
+    - cron: '0 22 * * 5'
+    
+  # Allows manual testing
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1. Download Private Repo (Factory)
+    - name: Checkout Private Code
+      uses: actions/checkout@v4
+
+    # 2. Set up Python
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    # 3. Install Dependencies (Using Matplotlib as per your latest code)
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pandas yfinance matplotlib
+
+    # 4. Run the Script
+    - name: Run Volatility Script
+      run: |
+        # Script is located in MarketDashboard folder
+        # It generates 'Intraday_Volatility.html' inside MarketDashboard/
+        python MarketDashboard/intraday_volatility_future.py
+
+    # 5. Move to Public Repo (Storefront)
+    - name: Push to Public Repo
+      env:
+        API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+      run: |
+        git config --global user.name "ParisTrader Bot"
+        git config --global user.email "bot@paristrader.com"
+        
+        # Clone Public Repo using the Secret Token
+        git clone https://x-access-token:${API_TOKEN_GITHUB}@github.com/ParisTrader/paristrader-terminal.git public_repo
+        
+        # Ensure the target folder exists in the public repo
+        mkdir -p public_repo/MarketDashboard
+        
+        # Copy the generated HTML file from Private Repo to Public Repo folder
+        # From: MarketDashboard/Intraday_Volatility.html (in private)
+        # To:   public_repo/MarketDashboard/ (in public)
+        cp MarketDashboard/Intraday_Volatility.html public_repo/MarketDashboard/
+        
+        # Go into public repo and push
+        cd public_repo
+        git add MarketDashboard/Intraday_Volatility.html
+        git commit -m "Auto-update Intraday Volatility HTML [skip ci]" || echo "No changes to commit"
+        git push origin main
