@@ -10,14 +10,14 @@ import time
 # 1. Page Configuration
 # ==========================================
 st.set_page_config(
-    page_title="Cross-Asset Quant Research",
+    page_title="Quant Research Desk",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
 # ==========================================
-# 2. Custom CSS
+# 2. Custom CSS (From your Old Version)
 # ==========================================
 st.markdown("""
 <style>
@@ -30,6 +30,7 @@ st.markdown("""
         color: #e2e8f0;
     }
 
+    /* Hide Streamlit Header/Footer */
     @media (min-width: 768.1px) {
         header { visibility: hidden !important; }
         [data-testid="stSidebarCollapseButton"] { display: none !important; }
@@ -41,6 +42,7 @@ st.markdown("""
     footer { visibility: hidden !important; display: none !important; }
     div[data-testid="stDecoration"] { display: none !important; }
 
+    /* BACKGROUND STYLES */
     .fixed-bg {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
         z-index: -1; 
@@ -63,11 +65,21 @@ st.markdown("""
         filter: blur(60px); pointer-events: none;
     }
 
+    /* Sidebar Styling */
     section[data-testid="stSidebar"] {
         background-color: #111827; 
         border-right: 1px solid #374151;
     }
 
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2, 
+    section[data-testid="stSidebar"] h3, 
+    section[data-testid="stSidebar"] p, 
+    section[data-testid="stSidebar"] span {
+        color: #F3F4F6 !important;
+    }
+
+    /* Profile Card Styling */
     .profile-card {
         background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(12px);
         border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px;
@@ -100,12 +112,15 @@ def load_html_file(file_path):
 
 
 def get_latest_file_content(folder_path, pattern="*.html"):
-    if not os.path.exists(folder_path): return None, "Dir not found"
+    if not os.path.exists(folder_path): return None, f"Dir not found: {folder_path}"
     list_of_files = glob.glob(os.path.join(folder_path, pattern))
-    if not list_of_files: return None, "No files found"
+    if not list_of_files: return None, f"No files found in {folder_path}"
     latest_file = max(list_of_files, key=os.path.getctime)
-    with open(latest_file, 'r', encoding='utf-8') as f:
-        return f.read(), os.path.basename(latest_file)
+    try:
+        with open(latest_file, 'r', encoding='utf-8') as f:
+            return f.read(), os.path.basename(latest_file)
+    except Exception as e:
+        return None, str(e)
 
 
 def load_stock_dna_with_injection():
@@ -132,10 +147,11 @@ def load_stock_dna_with_injection():
 # ==========================================
 
 with st.sidebar:
+    # --- CHANGED: Removed Name, kept generic ---
     st.markdown("""
     <div style='padding: 20px 0px; text-align: center; border-bottom: 1px solid #374151; margin-bottom: 20px;'>
-        <h2 style='color: #F3F4F6; margin:0; letter-spacing: 1px; font-weight: 700;'>The Anson's Guide to the Market</h2>
-        <p style='color: #9CA3AF; font-size: 0.85em; margin-top:5px;'>Equity Strategy & Research</p>
+        <h2 style='color: #F3F4F6; margin:0; letter-spacing: 1px; font-weight: 700;'>Quant Research</h2>
+        <p style='color: #9CA3AF; font-size: 0.85em; margin-top:5px;'>Equity Strategy & Risk</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -187,9 +203,11 @@ with st.sidebar:
 if target_page == "Home":
     col_main, col_profile = st.columns([0.7, 0.3], gap="large")
     with col_main:
+        # --- CHANGED: Generic Title, Removed Chinese Marketing, Removed Promo Links ---
         st.markdown("<h1 style='color:white;'>Independent Quantitative Research</h1>", unsafe_allow_html=True)
         st.markdown("<h3 style='color:#94a3b8;'>Systematic Alpha & Risk Premia Modeling</h3>", unsafe_allow_html=True)
 
+        # Keep TradingView
         components.html("""
         <div class="tradingview-widget-container">
           <div class="tradingview-widget-container__widget"></div>
@@ -199,14 +217,23 @@ if target_page == "Home":
           </script>
         </div>""", height=100)
 
+        # Removed: YouTube Video
+        # Removed: "ParisProgram.uk" link button
+
         st.subheader("🧠 Week Ahead Analysis")
         st.markdown(load_weekly_analysis())
 
     with col_profile:
+        # --- CHANGED: Generic Profile, No Name, No Personal Links ---
+
+        # Use a generic avatar URL
+        img_src = "https://ui-avatars.com/api/?name=Quant+Trader&background=1e293b&color=fff&size=150"
+
         st.markdown(f"""
             <div class="profile-card">
-                <h3 style="margin-top:10px; color:#F3F4F6;">Quantitative Analyst</h3>
-                <p style="color: #9CA3AF; font-size: 0.9em;">Ex-EQD Trader | Swing Trade Specialist</p>
+                <img src="{img_src}" style="border-radius: 50%; width: 120px; margin-bottom: 10px;">
+                <h3 style="margin-top:10px; color:#F3F4F6;">Quant Trader</h3>
+                <p style="color: #9CA3AF; font-size: 0.9em;">Systematic Trading | Research</p>
                 <hr style="margin: 15px 0; border-top: 1px solid rgba(255,255,255,0.1);">
                 <p style="text-align: left; font-size: 0.9em; line-height: 1.6; color: #e2e8f0;">
                     <b>Technical Focus:</b><br>
@@ -217,6 +244,8 @@ if target_page == "Home":
                 </p>
             </div>
         """, unsafe_allow_html=True)
+
+# ... (Routing for other pages remains standard) ...
 
 elif target_page == "Market Risk":
     html_content, _ = get_latest_file_content("ImpliedParameters")
@@ -278,8 +307,13 @@ elif target_page == "HSI CBBC Ladder":
     components.html(load_html_file(os.path.join("MarketDashboard", "HSI_CBBC_Ladder.html")), height=1200)
 
 elif target_page == "Volatility Target":
-    html_content, _ = get_latest_file_content("VolTarget", "vol_tool_*.html")
-    if html_content: components.html(html_content, height=1500, scrolling=True)
+    # --- Kept the FIX from previous steps here ---
+    st.title("Volatility Target Analysis")
+    html_content, error_msg = get_latest_file_content("VolTarget", "vol_tool_*.html")
+    if html_content:
+        components.html(html_content, height=1500, scrolling=True)
+    else:
+        st.error(f"⚠️ Could not load data. Error: {error_msg}")
 
 elif target_page == "Trade Portfolio":
     st.title("💼 Live Trade Journal & Analytics")
@@ -300,6 +334,11 @@ elif target_page == "Legal":
 # ==========================================
 st.markdown("""
 <div class="custom-footer">
-    <p>© 2026 Portfolio Project for Quantitative Research.</p>
+    <p>
+        © 2026 Quantitative Research from Anson. All rights reserved.<br>
+        <span style="font-size: 0.75rem; color: #6B7280;">
+        Not financial advice · For informational and educational purposes only.
+        </span>
+    </p>
 </div>
 """, unsafe_allow_html=True)
