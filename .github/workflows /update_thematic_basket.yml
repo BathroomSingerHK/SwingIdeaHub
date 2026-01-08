@@ -1,0 +1,77 @@
+name: Thematic Basket Signal Update
+
+on:
+  schedule:
+    # 1. Intra-day Update 1: 10:45 PM HKT (Mon-Fri) -> 14:45 UTC
+    - cron: '45 14 * * 1-5'
+    
+    # 2. Intra-day Update 2: 11:45 PM HKT (Mon-Fri) -> 15:45 UTC
+    - cron: '28 15 * * 1-5'
+    
+    # 3. Market Close Update: 06:00 AM HKT (Tue-Sat) -> 22:00 UTC (Mon-Fri)
+    - cron: '0 22 * * 1-5'
+
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout Private Code
+      - name: Checkout Private Code
+        uses: actions/checkout@v4
+
+      # 2. Setup Python (修正：升級到 3.11)
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: |
+          pip install pandas yfinance
+
+      # 4. Run Generation Script
+      - name: Run Thematic Basket Script
+        run: |
+          # 1. 清理 Private Repo 舊檔
+          rm -f ThematicBasket/*.html
+          
+          # 2. 執行 Python (使用相對路徑，Python 內部會定位到 ThematicBasket 資料夾)
+          python ThematicBasket/thematic_basket_generation.py
+          
+          # 3. 檢查結果
+          ls -l ThematicBasket/elite_signal_dashboard_*.html
+
+      # 5. Push to Public Repo
+      - name: Push to Public Repo
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        run: |
+          git config --global user.name "ParisTrader Bot"
+          git config --global user.email "bot@paristrader.com"
+          
+          # Clone Public Repo
+          git clone https://x-access-token:${API_TOKEN_GITHUB}@github.com/ParisTrader/paristrader-terminal.git public_repo
+          
+          # Ensure target folder exists in public repo
+          mkdir -p public_repo/ThematicBasket
+          
+          # 清理 Public Repo 裡的舊檔案
+          cd public_repo/ThematicBasket
+          echo "==== Deleting old files ===="
+          rm -f *.html
+          cd ../..
+          
+          # 複製新檔案
+          echo "==== Copying new file ===="
+          cp ThematicBasket/elite_signal_dashboard_*.html public_repo/ThematicBasket/
+          
+          # Commit and Push
+          cd public_repo
+          git add .
+          git status
+          git commit -m "Auto-update Thematic Basket Signals (Timestamped)" || echo "No changes to commit"
+          git push origin main
