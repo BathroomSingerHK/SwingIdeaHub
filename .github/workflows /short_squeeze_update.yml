@@ -1,0 +1,70 @@
+name: Short Squeeze Update
+
+on:
+  schedule:
+    # 6:00 PM HKT = 10:00 UTC (Mon-Fri)
+    - cron: '0 10 * * 1-5'
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Private Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas requests beautifulsoup4 playwright yfinance openpyxl
+          playwright install chromium
+
+      - name: Run Short Squeeze Scanner
+        run: |
+          # 1. Clean up old HTMLs in Private Repo Short_squeeze/ folder
+          rm -f Short_squeeze/*.html
+          
+          # 2. Run Python script (files generated inside Short_squeeze/ folder)
+          cd Short_squeeze
+          python short_squeeze.py
+          
+          # 3. Check result
+          ls -l Short_squeeze_*.html
+
+      - name: Push to Public Repo
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        run: |
+          git config --global user.name "ParisTrader Bot"
+          git config --global user.email "bot@paristrader.com"
+          
+          # 1. Clone Public Repo
+          git clone https://x-access-token:${API_TOKEN_GITHUB}@github.com/ParisTrader/paristrader-terminal.git public_repo
+          
+          # 2. Ensure folder exists
+          mkdir -p public_repo/Short_squeeze
+          
+          # 3. Clean up OLD files in Public Repo
+          cd public_repo/Short_squeeze
+          echo "==== Deleting old reports ===="
+          rm -f *.html
+          cd ../..
+          
+          # 4. Copy NEW file
+          echo "==== Copying new report ===="
+          cp Short_squeeze/Short_squeeze_*.html public_repo/Short_squeeze/
+          
+          # 5. Commit and Push
+          cd public_repo
+          git add .
+          git status
+          git commit -m "Auto-update Short Squeeze Report" || echo "No changes to commit"
+          
+          # [Crucial] Pull rebase before push to avoid conflict
+          git pull --rebase origin main
+          git push origin main
