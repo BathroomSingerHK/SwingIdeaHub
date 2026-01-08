@@ -1,0 +1,74 @@
+name: Trade Dashboard Update
+
+on:
+  schedule:
+    # 4:59 AM HKT = 20:59 UTC (previous day)
+    # Runs Monday to Friday (HKT morning, so Sunday to Thursday UTC)
+    # Adjust days 0-6 if you trade crypto on weekends
+    - cron: '59 20 * * 0-4'
+  workflow_dispatch:      # Allow manual trigger button
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Private Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas yfinance plotly numpy
+
+      - name: Run Trade Dashboard Script
+        run: |
+          # 1. Clean up OLD HTML reports in Private Repo Trade/ folder
+          # This prevents accumulating old files in the workspace
+          rm -f Trade/trade_record_*.html
+          
+          # 2. Run Python script (files generated inside Trade/ folder)
+          # Ensure your script is named correctly (e.g., trade_dashboard.py)
+          cd Trade
+          python trade_dashboard.py
+          
+          # 3. Check result (verify new file exists)
+          ls -l trade_record_*.html
+
+      - name: Push to Public Repo
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        run: |
+          git config --global user.name "ParisTrader Bot"
+          git config --global user.email "bot@paristrader.com"
+          
+          # 1. Clone Public Repo
+          git clone https://x-access-token:${API_TOKEN_GITHUB}@github.com/ParisTrader/paristrader-terminal.git public_repo
+          
+          # 2. Ensure folder exists
+          mkdir -p public_repo/Trade
+          
+          # 3. Clean up OLD files in Public Repo
+          cd public_repo/Trade
+          echo "==== Deleting old trade reports ===="
+          rm -f trade_record_*.html
+          cd ../..
+          
+          # 4. Copy NEW file and CSV (Important to sync CSV too if prices updated)
+          echo "==== Copying new report and CSV ===="
+          cp Trade/trade_record_*.html public_repo/Trade/
+          cp Trade/swing_trades.csv public_repo/Trade/
+          
+          # 5. Commit and Push
+          cd public_repo
+          git add .
+          git status
+          git commit -m "Auto-update Trade Dashboard & Prices" || echo "No changes to commit"
+          
+          # [Crucial] Pull rebase before push to avoid concurrency conflicts
+          git pull --rebase origin main
+          git push origin main
