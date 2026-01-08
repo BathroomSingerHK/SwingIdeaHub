@@ -1,0 +1,91 @@
+name: Market Breadth Update
+
+on:
+  schedule:
+    # 1. 早上 09:45 HKT (01:45 UTC)
+    - cron: '45 1 * * 1-5'
+    
+    # 2. 早上 11:00 HKT (03:00 UTC)
+    - cron: '0 3 * * 1-5'
+    
+    # 3. 下午 04:00 HKT (08:00 UTC)
+    - cron: '25 8 * * 1-5'
+    
+    # 4. 晚上 10:45 HKT (14:45 UTC)
+    - cron: '50 14 * * 1-5'
+    
+    # 5. 晚上 11:49 HKT (15:49 UTC)
+    - cron: '35 15 * * 1-5'
+
+  workflow_dispatch:      # 允許手動測試按鈕
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 下載 Private Repo
+      - name: Checkout Private Code
+        uses: actions/checkout@v4
+
+      # 2. 設定 Python (使用 3.11 避免版本問題)
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # 3. 安裝依賴 (matplotlib, yfinance, pandas)
+      - name: Install dependencies
+        run: |
+          pip install pandas yfinance matplotlib
+
+      # 4. 執行生成腳本
+      - name: Run Market Breadth Script
+        run: |
+          # 1. 清理 Private Repo 中可能殘留的舊 HTML
+          # 注意：腳本產出在 MarketDashboard/MarketBreadth/
+          rm -f MarketDashboard/MarketBreadth/*.html
+          
+          # 2. 進入 MarketDashboard 資料夾執行腳本
+          cd MarketDashboard
+          # (Python 腳本會自動建立 MarketBreadth 子資料夾並存檔)
+          python generate_market_breadth.py
+          
+          # 3. 檢查生成結果 (確認檔案存在)
+          echo "=== 檢查生成的新檔案 ==="
+          ls -l MarketBreadth/*.html
+
+      # 5. 搬運到 Public Repo (前店)
+      - name: Push to Public Repo
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        run: |
+          git config --global user.name "ParisTrader Bot"
+          git config --global user.email "bot@paristrader.com"
+          
+          # Clone Public Repo
+          git clone https://x-access-token:${API_TOKEN_GITHUB}@github.com/ParisTrader/paristrader-terminal.git public_repo
+          
+          # 1. 確保 Public Repo 中的目標資料夾存在
+          mkdir -p public_repo/MarketDashboard/MarketBreadth
+          
+          # 2. 清理 Public Repo 裡的舊檔案 (刪除舊的 timestamp 檔案)
+          cd public_repo/MarketDashboard/MarketBreadth
+          echo "==== 刪除 Public Repo 舊檔案 ===="
+          rm -f *.html
+          # 回到根目錄
+          cd ../../..
+          
+          # 3. 複製新檔案 (從 Private 的 MarketDashboard/MarketBreadth 複製過去)
+          echo "==== 複製新檔案 ===="
+          cp MarketDashboard/MarketBreadth/*.html public_repo/MarketDashboard/MarketBreadth/
+          
+          # 4. 上傳
+          cd public_repo
+          git add .
+          git status
+          git commit -m "Auto-update Market Breadth (Timestamped)" || echo "No changes to commit"
+          
+          # 5. 拉取最新變更並推送
+          git pull --rebase origin main
+          git push origin main
