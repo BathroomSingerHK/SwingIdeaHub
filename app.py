@@ -134,14 +134,14 @@ def load_stock_dna_with_injection():
 with st.sidebar:
     st.markdown("""
     <div style='padding: 20px 0px; text-align: center; border-bottom: 1px solid #374151; margin-bottom: 20px;'>
-        <h2 style='color: #F3F4F6; margin:0; letter-spacing: 1px; font-weight: 700;'>Quant</h2>
-        <p style='color: #9CA3AF; font-size: 0.85em; margin-top:5px;'>Cross-Asset Strategy & Research</p>
+        <h2 style='color: #F3F4F6; margin:0; letter-spacing: 1px; font-weight: 700;'>The Anson's Guide to the Market</h2>
+        <p style='color: #9CA3AF; font-size: 0.85em; margin-top:5px;'>Equity Strategy & Research</p>
     </div>
     """, unsafe_allow_html=True)
 
     selected_nav = option_menu(
         menu_title="Navigation",
-        options=["Home", "Market Intelligence", "Equity Research", "Fixed Income & Vol", "Trade Portfolio", "Legal"],
+        options=["Home", "Market Intelligence", "Equity Research", "Equity Vol", "Trade Portfolio", "Legal"],
         icons=["house", "globe", "search", "graph-up-arrow", "briefcase", "file-text"],
         menu_icon="compass",
         default_index=0,
@@ -170,7 +170,7 @@ with st.sidebar:
             styles={"nav-link": {"font-size": "14px"}}
         )
 
-    elif selected_nav == "Fixed Income & Vol":
+    elif selected_nav == "Equity Vol":
         target_page = option_menu(
             menu_title=None,
             options=["US Option", "HK Option", "Volume Profile", "Intraday Volatility", "HSI CBBC Ladder",
@@ -187,7 +187,7 @@ with st.sidebar:
 if target_page == "Home":
     col_main, col_profile = st.columns([0.7, 0.3], gap="large")
     with col_main:
-        st.markdown("<h1 style='color:white;'>Cross-Asset Quantitative Research</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='color:white;'>Independent Quantitative Research</h1>", unsafe_allow_html=True)
         st.markdown("<h3 style='color:#94a3b8;'>Systematic Alpha & Risk Premia Modeling</h3>", unsafe_allow_html=True)
 
         components.html("""
@@ -206,7 +206,7 @@ if target_page == "Home":
         st.markdown(f"""
             <div class="profile-card">
                 <h3 style="margin-top:10px; color:#F3F4F6;">Quantitative Analyst</h3>
-                <p style="color: #9CA3AF; font-size: 0.9em;">Ex-EQD Trader | Multi-Asset Specialist</p>
+                <p style="color: #9CA3AF; font-size: 0.9em;">Ex-EQD Trader | Swing Trade Specialist</p>
                 <hr style="margin: 15px 0; border-top: 1px solid rgba(255,255,255,0.1);">
                 <p style="text-align: left; font-size: 0.9em; line-height: 1.6; color: #e2e8f0;">
                     <b>Technical Focus:</b><br>
@@ -300,6 +300,6 @@ elif target_page == "Legal":
 # ==========================================
 st.markdown("""
 <div class="custom-footer">
-    <p>© 2026 Portfolio Project for Quantitative Cross-Asset Research.</p>
+    <p>© 2026 Portfolio Project for Quantitative Research.</p>
 </div>
 """, unsafe_allow_html=True)
