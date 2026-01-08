@@ -1,0 +1,72 @@
+name: Risk Dashboard (Merged) Update
+
+on:
+  schedule:
+    # 1. Night: 10:45 PM HKT -> 14:45 UTC (Mon-Fri)
+    - cron: '45 14 * * 1-5'
+    
+    # 2. Night: 11:55 PM HKT -> 15:55 UTC (Mon-Fri)
+    - cron: '55 15 * * 1-5'
+    
+    # 3. Morning: 07:30 AM HKT -> 23:30 UTC (Sun-Fri)
+    - cron: '30 23 * * 0-5'
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Private Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas yfinance matplotlib
+
+      - name: Run Implied Parameters Script
+        run: |
+          # 1. 清理 Private Repo 舊檔
+          rm -f ImpliedParameters/*.html
+          
+          # 2. 執行 Python (使用相對路徑，Python 內部會自己找對資料夾)
+          python ImpliedParameters/implied_parameters.py
+          
+          # 3. 檢查生成結果
+          ls -l ImpliedParameters/implied_params_*.html
+
+      - name: Push to Public Repo
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        run: |
+          git config --global user.name "ParisTrader Bot"
+          git config --global user.email "bot@paristrader.com"
+          
+          # Clone Public Repo
+          git clone https://x-access-token:${API_TOKEN_GITHUB}@github.com/ParisTrader/paristrader-terminal.git public_repo
+          
+          # 確保資料夾存在
+          mkdir -p public_repo/ImpliedParameters
+          
+          # 4. 清理 Public Repo 裡的舊檔案
+          cd public_repo/ImpliedParameters
+          echo "==== 刪除 Public Repo 舊檔案 ===="
+          rm -f *.html
+          cd ../..
+          
+          # 5. 複製新檔案 (從 Private 到 Public)
+          echo "==== 複製新檔案 ===="
+          cp ImpliedParameters/implied_params_*.html public_repo/ImpliedParameters/
+          
+          # 6. 上傳
+          cd public_repo
+          git add .
+          git status
+          git commit -m "Auto-update Risk Dashboard (Timestamped)" || echo "No changes to commit"
+          git push origin main
