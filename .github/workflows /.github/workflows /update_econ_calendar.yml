@@ -1,0 +1,74 @@
+name: Update Economic Calendar (Public)
+
+on:
+  schedule:
+    # 9:11 AM JST = 00:11 UTC
+    # Runs every Saturday
+    - cron: '11 0 * * 6'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout Private Code
+      - name: Checkout Private Code
+        uses: actions/checkout@v4
+
+      # 2. Setup Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install pandas requests
+
+      # 3. Generate Report (Private Side)
+      - name: Run Economic Calendar Script
+        run: |
+          # A. Clean old files in Private Repo to avoid confusion
+          rm -f MarketDashboard/EconomicCalendar/*.html
+          
+          # B. Run the script (Change dir to MarketDashboard so script output goes to correct subfolder)
+          cd MarketDashboard
+          python EconomicCalendar.py
+          
+          # C. Verify generation
+          echo "Checking generated files..."
+          ls -l EconomicCalendar/calendar_report_*.html
+
+      # 4. Push to Public Repo (paristrader-terminal)
+      - name: Push to Public Repo
+        env:
+          # Make sure this secret exists in your repo
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }} 
+        run: |
+          git config --global user.name "ParisTrader Bot"
+          git config --global user.email "bot@paristrader.com"
+          
+          # A. Clone Public Repo
+          git clone https://x-access-token:${API_TOKEN_GITHUB}@github.com/ParisTrader/paristrader-terminal.git public_repo
+          
+          # B. Ensure target folder exists in Public Repo
+          mkdir -p public_repo/MarketDashboard/EconomicCalendar
+          
+          # C. Clean OLD files in Public Repo
+          cd public_repo/MarketDashboard/EconomicCalendar
+          echo "==== Deleting Old Reports in Public Repo ===="
+          rm -f *.html
+          cd ../../..
+          
+          # D. Copy NEW file (Private -> Public)
+          echo "==== Copying New Report ===="
+          # Note: Script ran in MarketDashboard folder, so output is at MarketDashboard/EconomicCalendar
+          cp MarketDashboard/EconomicCalendar/calendar_report_*.html public_repo/MarketDashboard/EconomicCalendar/
+          
+          # E. Commit & Push
+          cd public_repo
+          git add .
+          git status
+          git commit -m "📅 Auto-update Economic Calendar: $(date +'%Y-%m-%d')" || echo "No changes to commit"
+          git push origin main
