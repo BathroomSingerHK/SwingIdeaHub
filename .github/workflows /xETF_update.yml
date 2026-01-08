@@ -1,0 +1,81 @@
+name: xETF Smart Money Update
+
+on:
+  schedule:
+    # 1. 10:45 PM HKT (Mon-Fri) -> 14:45 UTC
+    - cron: '55 14 * * 1-5'
+    
+    # 2. 11:45 PM HKT (Mon-Fri) -> 15:45 UTC
+    - cron: '45 15 * * 1-5'
+    
+    # 3. Market Close Update: 06:00 AM HKT (Tue-Sat) -> 22:00 UTC (Mon-Fri)
+    - cron: '0 22 * * 1-5'
+
+  workflow_dispatch:      # Allow manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout Private Code
+      - name: Checkout Private Code
+        uses: actions/checkout@v4
+
+      # 2. Setup Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: |
+          pip install pandas yfinance Jinja2
+
+      # 4. Run Generation Script
+      - name: Run xETF Script
+        run: |
+          # 1. Clean up old HTML in Private Repo xETF folder
+          rm -f xETF/*.html
+          
+          # 2. Enter directory and run script
+          cd xETF
+          python xETF.py
+          
+          # 3. Check result
+          ls -l ETF_Smart_Money_Report_*.html
+
+      # 5. Push to Public Repo
+      - name: Push to Public Repo
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        run: |
+          git config --global user.name "ParisTrader Bot"
+          git config --global user.email "bot@paristrader.com"
+          
+          # Clone Public Repo
+          git clone https://x-access-token:${API_TOKEN_GITHUB}@github.com/ParisTrader/paristrader-terminal.git public_repo
+          
+          # Ensure target folder exists in public repo
+          mkdir -p public_repo/xETF
+          
+          # Clean up old HTMLs in Public Repo
+          cd public_repo/xETF
+          echo "==== Deleting old files ===="
+          rm -f *.html
+          cd ../..
+          
+          # Copy new file
+          echo "==== Copying new file ===="
+          cp xETF/ETF_Smart_Money_Report_*.html public_repo/xETF/
+          
+          # Commit and Push
+          cd public_repo
+          
+          # [關鍵修正] 使用 git add . 來包含 "刪除舊檔" 和 "新增新檔" 的所有變更
+          git add .
+          
+          git status  # 建議加上這行，方便在 Log 中檢查狀態
+          git commit -m "Auto-update xETF Smart Money Report (Timestamped)" || echo "No changes to commit"
+          git push origin main
