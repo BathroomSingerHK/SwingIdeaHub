@@ -1,0 +1,77 @@
+name: Volatility Target Update
+
+on:
+  schedule:
+    - cron: '0 0 * * 2-6'
+  workflow_dispatch:      # 允許手動測試按鈕
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 下載 Private Repo
+      - name: Checkout Private Code
+        uses: actions/checkout@v4
+
+      # 2. 設定 Python
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      # 3. 安裝依賴
+      - name: Install dependencies
+        run: |
+          pip install pandas yfinance plotly
+
+      # 4. 執行計算
+      - name: Run Vol Target Script
+        run: |
+          # 1. 清理 Private Repo 舊檔
+          rm -f VolTarget/*.html
+          
+          # 2. 執行 Python
+          python VolTarget/new_vol_target.py
+          
+          # 3. 檢查結果
+          ls -l VolTarget/vol_tool_*.html
+
+      # 5. 搬運到 Public Repo
+      - name: Push to Public Repo
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.API_TOKEN_GITHUB }}
+        run: |
+          git config --global user.name "ParisTrader Bot"
+          git config --global user.email "bot@paristrader.com"
+          
+          # Clone Public Repo
+          git clone https://x-access-token:${API_TOKEN_GITHUB}@github.com/ParisTrader/paristrader-terminal.git public_repo
+          
+          # 確保資料夾存在
+          mkdir -p public_repo/VolTarget
+          
+          # 清理 Public Repo 裡的舊檔案
+          cd public_repo/VolTarget
+          echo "==== Deleting old files ===="
+          rm -f *.html
+          
+          # 回到 public_repo 根目錄
+          cd ..
+          
+          # 複製新檔案
+          echo "==== Copying new file ===="
+          cp ../VolTarget/vol_tool_*.html VolTarget/
+          
+          # 準備提交
+          git add .
+          git status
+          git commit -m "Auto-update Volatility Target Tool" || echo "No changes to commit"
+          
+          # [關鍵修正] 在 Push 前先拉取最新的遠端變更並 Rebase
+          echo "==== Pulling latest changes ===="
+          git pull --rebase origin main
+          
+          # 推送
+          echo "==== Pushing to remote ===="
+          git push origin main
